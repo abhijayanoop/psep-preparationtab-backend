@@ -1,0 +1,68 @@
+import IStudent from "@/interfaces/student.interface";
+import { Schema, model, Document } from "mongoose";
+
+const studentSchema = new Schema({
+  courseDuration: Number,
+  currentSemester: Number,
+  studentName: String,
+  talismaStdId: String,
+  tal_enrollmentNumber: String,
+  degree: String,
+  programme: String,
+  specialization: String,
+  branch: String,
+  major: String,
+  minor: String,
+  university: String,
+  universityId: String,
+  curriculumType: String,
+  enrollmentYear: Number,
+  email: String,
+  mobileNumber: String,
+  noOfYearsOfStudy: Number,
+  createdDate: Date,
+  addedDate: Date,
+  address: String,
+  college: String,
+  collegeId: String,
+  city: String,
+  state: String,
+  country: String,
+  pincode: String,
+  semester: Number,
+  dob: Date,
+  religion: String,
+  caste: String,
+  minority: Boolean,
+  nationality: String,
+  gender: String,
+  hsc: {
+    stream: String,
+    marks: [
+      {
+        subject: String,
+        subjectMarks: Number,
+      },
+    ],
+  },
+  cas: Number,
+  cgpa: Number,
+  employabilityIndex: Number,
+  acquiredSkills: [String],
+  unverifiedSkills: [String],
+  empIndexGraph: [{ sem: String, empIndex: Number }],
+  skillIndex: Number,
+  knowledgeIndex: Number,
+  totalQuestions: Number,
+  correctAnswers: Number,
+  academicIndex: Number,
+  marketIndex: Number,
+  course: String,
+  careerData: {
+    industry: String,
+    role: String,
+  },
+});
+const studentModel = model<IStudent & Document>("Student", studentSchema);
+
+export default studentModel;
