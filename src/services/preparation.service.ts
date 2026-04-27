@@ -9,6 +9,7 @@ import {
 import GeminiService from "./gemini.service";
 import {
   GeneratedRecommendation,
+  MilestoneProgress,
   PersistedRecommendation,
   PersistedRecommendationsArraySchema,
 } from "@/schema/preparation.schema";
@@ -200,6 +201,38 @@ class PreparationService {
       currentHash: currentHash,
       storedHash: activeSet.contextHash,
     };
+  }
+
+  public async updateMilestoneProgress(
+    studentId: string,
+    roleId: string,
+    milestoneNumber: number,
+    progress: MilestoneProgress,
+  ): Promise<void> {
+    const result = await recommendationSetModel.updateOne(
+      { studentId, isActive: true, "recommendations.roleId": roleId },
+      {
+        $set: {
+          "recommendations.$[rec].milestones.$[ms].progress": progress,
+        },
+      },
+      {
+        arrayFilters: [
+          { "rec.roleId": roleId },
+          { "ms.milestoneNumber": milestoneNumber },
+        ],
+      },
+    );
+
+    if (result.matchedCount === 0) {
+      throw new HttpException(
+        404,
+        "Active recommendation set or role not found",
+      );
+    }
+    if (result.modifiedCount === 0) {
+      throw new HttpException(404, "Milestone not found");
+    }
   }
 
   public async getActiveRecommendationSet(

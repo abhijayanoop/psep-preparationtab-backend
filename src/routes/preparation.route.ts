@@ -2,6 +2,7 @@
 import { Router } from "express";
 import PreparationController from "@controllers/preparation.controller";
 import { Routes } from "@interfaces/routes.interface";
+import { geminiRateLimiter } from "@middlewares/rate-limit.middleware";
 
 class PreparationRoute implements Routes {
   public path = "/preparation";
@@ -25,17 +26,24 @@ class PreparationRoute implements Routes {
 
     this.router.post(
       `${this.path}/:studentId/generate`,
+      geminiRateLimiter,
       this.preparationController.generateRecommendations,
     );
 
     this.router.post(
       `${this.path}/:studentId/regenerate`,
+      geminiRateLimiter,
       this.preparationController.regenerateRecommendations,
     );
 
     this.router.get(
       `${this.path}/:studentId/stale-check`,
       this.preparationController.checkStale,
+    );
+
+    this.router.patch(
+      `${this.path}/:studentId/recommendations/:roleId/milestones/:milestoneNumber/progress`,
+      this.preparationController.updateMilestoneProgress,
     );
   }
 }

@@ -1,4 +1,6 @@
 import PreparationService from "@/services/preparation.service";
+import { HttpException } from "@/exceptions/HttpException";
+import { MilestoneProgressSchema } from "@/schema/preparation.schema";
 import type { Request, Response, NextFunction } from "express";
 
 class PreparationController {
@@ -111,6 +113,44 @@ class PreparationController {
         data: set,
         message: "preparation regenerated",
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * PATCH /preparation/:studentId/recommendations/:roleId/milestones/:milestoneNumber/progress
+   */
+  public updateMilestoneProgress = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { studentId, roleId } = req.params;
+      const milestoneNumber = Number(req.params.milestoneNumber);
+      const { progress } = req.body;
+
+      if (isNaN(milestoneNumber) || milestoneNumber < 1) {
+        throw new HttpException(400, "milestoneNumber must be a positive integer");
+      }
+
+      const parsed = MilestoneProgressSchema.safeParse(progress);
+      if (!parsed.success) {
+        throw new HttpException(
+          400,
+          "progress must be one of: not_started, in_progress, completed",
+        );
+      }
+
+      await this.preparationService.updateMilestoneProgress(
+        studentId,
+        roleId,
+        milestoneNumber,
+        parsed.data,
+      );
+
+      res.status(200).json({ message: "Milestone progress updated" });
     } catch (error) {
       next(error);
     }

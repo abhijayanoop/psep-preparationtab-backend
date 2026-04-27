@@ -66,6 +66,11 @@ const MilestoneSubSchema = new Schema(
     careerReadinessGain: { type: Number, required: true },
     conceptsToMaster: { type: [String], required: true },
     capstoneProject: { type: CapstoneProjectSubSchema, required: true },
+    progress: {
+      type: String,
+      enum: ["not_started", "in_progress", "completed"],
+      default: "not_started",
+    },
   },
   { _id: false },
 );

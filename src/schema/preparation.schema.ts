@@ -72,6 +72,12 @@ export const CapstoneProjectSchema = z.object({
   estimatedDuration: z.string().min(1),
 });
 
+export const MilestoneProgressSchema = z.enum([
+  "not_started",
+  "in_progress",
+  "completed",
+]);
+
 export const MilestoneSchema = z.object({
   milestoneNumber: z.number().int().positive(),
   title: z.string().min(1),
@@ -81,6 +87,10 @@ export const MilestoneSchema = z.object({
     .min(3, "A milestone needs at least 3 concepts")
     .max(8),
   capstoneProject: CapstoneProjectSchema,
+});
+
+export const PersistedMilestoneSchema = MilestoneSchema.extend({
+  progress: MilestoneProgressSchema.default("not_started"),
 });
 
 const _recommendationBaseShape = z.object({
@@ -150,6 +160,7 @@ export const GeneratedRecommendationsArraySchema = z
 export const PersistedRecommendationSchema = _recommendationBaseShape
   .extend({
     roleId: RoleIdSchema,
+    milestones: z.array(PersistedMilestoneSchema).min(3).max(6),
   })
   .refine(_progressionOrderCheck, _progressionOrderOpts)
   .refine(_milestoneGainSumCheck, _milestoneGainSumOpts);
@@ -171,6 +182,8 @@ export type ProgressionStage = z.infer<typeof ProgressionStageSchema>;
 export type Company = z.infer<typeof CompanySchema>;
 export type CapstoneProject = z.infer<typeof CapstoneProjectSchema>;
 export type Milestone = z.infer<typeof MilestoneSchema>;
+export type MilestoneProgress = z.infer<typeof MilestoneProgressSchema>;
+export type PersistedMilestone = z.infer<typeof PersistedMilestoneSchema>;
 
 export type GeneratedRecommendation = z.infer<
   typeof GeneratedRecommendationSchema
