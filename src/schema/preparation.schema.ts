@@ -78,6 +78,42 @@ export const MilestoneProgressSchema = z.enum([
   "completed",
 ]);
 
+export const RubricCriterionSchema = z.object({
+  id: z.string().min(1),
+  description: z.string().min(10),
+  requirementType: z.enum(["must_have", "nice_to_have"]),
+  evaluationHint: z.string().min(5), // tells Gemini where to look in the code
+});
+
+export const EvaluationRubricSchema = z.object({
+  criteria: z
+    .array(RubricCriterionSchema)
+    .min(3, "Rubric needs at least 3 criteria")
+    .max(8, "Rubric max 8 criteria to keep feedback focused"),
+});
+
+export const CriterionResultSchema = z.object({
+  criterionId: z.string().min(1),
+  met: z.enum(["yes", "no", "partial"]),
+  feedback: z.string().min(1),
+});
+
+export const MilestoneEvaluationSchema = z.object({
+  verdict: z.enum(["pass", "needs_revision"]),
+  overallScore: z.number().min(0).max(100),
+  criteriaResults: z.array(CriterionResultSchema).min(1),
+  strengths: z.array(z.string()).min(1).max(5),
+  improvementAreas: z.array(z.string()).max(5),
+  nextStepHint: z.string().min(10).max(300),
+});
+
+export const SubmissionAttemptSchema = z.object({
+  attemptNumber: z.number().int().positive(),
+  submittedAt: z.date(),
+  submissionUrl: z.string().url(),
+  evaluation: MilestoneEvaluationSchema,
+});
+
 export const MilestoneSchema = z.object({
   milestoneNumber: z.number().int().positive(),
   title: z.string().min(1),
@@ -87,10 +123,15 @@ export const MilestoneSchema = z.object({
     .min(3, "A milestone needs at least 3 concepts")
     .max(8),
   capstoneProject: CapstoneProjectSchema,
+  submissionType: z
+    .enum(["github_repo", "deployed_url", "github_repo_with_url"])
+    .default("github_repo"),
+  evaluationRubric: EvaluationRubricSchema.optional(), // optional: filled by Gemini
 });
 
 export const PersistedMilestoneSchema = MilestoneSchema.extend({
   progress: MilestoneProgressSchema.default("not_started"),
+  submissionAttempts: z.array(SubmissionAttemptSchema).default([]),
 });
 
 const _recommendationBaseShape = z.object({
@@ -184,6 +225,11 @@ export type CapstoneProject = z.infer<typeof CapstoneProjectSchema>;
 export type Milestone = z.infer<typeof MilestoneSchema>;
 export type MilestoneProgress = z.infer<typeof MilestoneProgressSchema>;
 export type PersistedMilestone = z.infer<typeof PersistedMilestoneSchema>;
+export type RubricCriterion = z.infer<typeof RubricCriterionSchema>;
+export type EvaluationRubric = z.infer<typeof EvaluationRubricSchema>;
+export type CriterionResult = z.infer<typeof CriterionResultSchema>;
+export type MilestoneEvaluation = z.infer<typeof MilestoneEvaluationSchema>;
+export type SubmissionAttempt = z.infer<typeof SubmissionAttemptSchema>;
 
 export type GeneratedRecommendation = z.infer<
   typeof GeneratedRecommendationSchema

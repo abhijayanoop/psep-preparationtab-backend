@@ -1,4 +1,6 @@
 import { StudentPreparationContext } from "@interfaces/preparation.interface";
+import type { EvaluationRubric } from "@/schema/preparation.schema";
+import type { GitHubRepoContents } from "./github-fetch.util";
 
 export const buildCareerRecommendationPrompt = (
   context: StudentPreparationContext,
@@ -95,12 +97,41 @@ Array must contain exactly 4 objects matching this structure:
         "milestoneNumber": 1,
         "title": "HTML, CSS & JavaScript Foundations",
         "careerReadinessGain": 20,
-        "conceptsToMaster": ["HTML5 Semantic Markup", "CSS Flexbox & Grid", "JavaScript ES6+", "DOM Manipulation", "Responsive Design Principles"],
+        "submissionType": "github_repo",
+        "conceptsToMaster": ["HTML5 Semantic Markup", "CSS Flexbox & Grid", "JavaScript ES6+"],
         "capstoneProject": {
           "name": "Responsive Landing Page",
-          "description": "Build a fully responsive multi-section landing page for a fictional product using semantic HTML, modern CSS layouts, and vanilla JavaScript for interactivity.",
-          "deliverables": ["Mobile-first layout", "Smooth scroll navigation", "Interactive UI elements", "Deployed on GitHub Pages"],
+          "description": "Build a fully responsive multi-section landing page...",
+          "deliverables": ["Mobile-first layout", "Smooth scroll navigation", "Deployed on GitHub Pages"],
           "estimatedDuration": "1–2 weeks"
+        },
+        "evaluationRubric": {
+          "criteria": [
+            {
+              "id": "mobile-first",
+              "description": "Layout uses mobile-first CSS with min-width breakpoints",
+              "requirementType": "must_have",
+              "evaluationHint": "Check CSS file for media queries starting with min-width, not max-width"
+            },
+            {
+              "id": "semantic-html",
+              "description": "Uses semantic HTML5 elements (header, nav, main, section, footer)",
+              "requirementType": "must_have",
+              "evaluationHint": "Check index.html for presence of semantic landmark elements"
+            },
+            {
+              "id": "deployed",
+              "description": "Project is deployed and accessible via a URL in the README",
+              "requirementType": "must_have",
+              "evaluationHint": "Check README.md for a deployed URL link"
+            },
+            {
+              "id": "smooth-scroll",
+              "description": "Navigation links use smooth scrolling behavior",
+              "requirementType": "nice_to_have",
+              "evaluationHint": "Check for scroll-behavior: smooth in CSS or JS scroll handlers"
+            }
+          ]
         }
       }
     ]
@@ -115,6 +146,10 @@ Array must contain exactly 4 objects matching this structure:
 - hiringStatus MUST be one of: "High Hiring", "Moderate Hiring", "Low Hiring".
 - All CTC ranges must satisfy min <= max.
 - Every blurb must reference the student's specific profile data.
+- Each milestone MUST include an "evaluationRubric" with 3–6 criteria.
+- At least 2 criteria per milestone must be "must_have".
+- "evaluationHint" must be specific: tell where in the code to look (file name, CSS property, function name).
+- "submissionType" must always be "github_repo" for coding milestones.
   `.trim();
 };
 
@@ -128,3 +163,77 @@ You always return valid JSON matching the requested schema exactly. You never
 include prose, explanations, or markdown code fences around your JSON output.
 You never invent fields not requested in the schema.
 `.trim();
+
+export const buildMilestoneEvaluationPrompt = (
+  milestoneTitle: string,
+  capstoneDescription: string,
+  rubric: EvaluationRubric,
+  repoContents: GitHubRepoContents,
+): string => {
+  const criteriaText = rubric.criteria
+    .map(
+      (c, i) =>
+        `${i + 1}. [${c.requirementType.toUpperCase()}] id="${c.id}"
+   Description: ${c.description}
+   Where to look: ${c.evaluationHint}`,
+    )
+    .join("\n\n");
+
+  const fileTreeText =
+    repoContents.fileTree.length > 0
+      ? repoContents.fileTree.join("\n")
+      : "No file tree available";
+
+  const readmeText = repoContents.readmeContent
+    ? `\`\`\`\n${repoContents.readmeContent}\n\`\`\``
+    : "No README found in repository";
+
+  return `
+You are evaluating a student's GitHub repository submission against a milestone rubric.
+
+## MILESTONE BEING EVALUATED
+Title: ${milestoneTitle}
+Capstone Goal: ${capstoneDescription}
+
+## EVALUATION RUBRIC
+Evaluate EACH criterion below. For must_have criteria, be strict.
+
+${criteriaText}
+
+## REPOSITORY INFORMATION
+Repo: ${repoContents.owner}/${repoContents.repo}
+Default branch: ${repoContents.defaultBranch}
+
+### File Tree (up to 50 files)
+${fileTreeText}
+
+### README Content
+${readmeText}
+
+## VERDICT RULES
+- verdict = "pass" ONLY if ALL must_have criteria are met = "yes"
+- verdict = "needs_revision" if any must_have is "no" or "partial"
+- nice_to_have criteria do NOT affect the verdict
+- overallScore = weighted average: must_have worth 2x, nice_to_have worth 1x; yes=100, partial=50, no=0
+
+## OUTPUT FORMAT
+Return ONLY valid JSON, no prose, no code fences:
+
+{
+  "verdict": "pass" | "needs_revision",
+  "overallScore": 0-100,
+  "criteriaResults": [
+    {
+      "criterionId": "id-from-rubric",
+      "met": "yes" | "no" | "partial",
+      "feedback": "specific observation about what you saw or didn't see in the code"
+    }
+  ],
+  "strengths": ["specific positive observation", ...],
+  "improvementAreas": ["specific thing to fix", ...],
+  "nextStepHint": "One concrete action the student should take next"
+}
+
+criteriaResults must include one entry per criterion in the rubric, in the same order.
+  `.trim();
+};

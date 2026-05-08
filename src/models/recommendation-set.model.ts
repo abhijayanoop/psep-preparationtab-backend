@@ -59,6 +59,58 @@ const CapstoneProjectSubSchema = new Schema(
   { _id: false },
 );
 
+const RubricCriterionSubSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    description: { type: String, required: true },
+    requirementType: {
+      type: String,
+      enum: ["must_have", "nice_to_have"],
+      required: true,
+    },
+    evaluationHint: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const EvaluationRubricSubSchema = new Schema(
+  {
+    criteria: { type: [RubricCriterionSubSchema], required: true },
+  },
+  { _id: false },
+);
+
+const CriterionResultSubSchema = new Schema(
+  {
+    criterionId: { type: String, required: true },
+    met: { type: String, enum: ["yes", "no", "partial"], required: true },
+    feedback: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const MilestoneEvaluationSubSchema = new Schema(
+  {
+    verdict: { type: String, enum: ["pass", "needs_revision"], required: true },
+    overallScore: { type: Number, required: true },
+    criteriaResults: { type: [CriterionResultSubSchema], required: true },
+    strengths: { type: [String], required: true },
+    improvementAreas: { type: [String], default: [] },
+    nextStepHint: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const SubmissionAttemptSubSchema = new Schema(
+  {
+    attemptNumber: { type: Number, required: true },
+    submittedAt: { type: Date, required: true },
+    submissionUrl: { type: String, required: true },
+    evaluation: { type: MilestoneEvaluationSubSchema, required: true },
+  },
+  { _id: false },
+);
+
 const MilestoneSubSchema = new Schema(
   {
     milestoneNumber: { type: Number, required: true },
@@ -66,11 +118,18 @@ const MilestoneSubSchema = new Schema(
     careerReadinessGain: { type: Number, required: true },
     conceptsToMaster: { type: [String], required: true },
     capstoneProject: { type: CapstoneProjectSubSchema, required: true },
+    submissionType: {
+      type: String,
+      enum: ["github_repo", "deployed_url", "github_repo_with_url"],
+      default: "github_repo",
+    },
+    evaluationRubric: { type: EvaluationRubricSubSchema, default: null },
     progress: {
       type: String,
       enum: ["not_started", "in_progress", "completed"],
       default: "not_started",
     },
+    submissionAttempts: { type: [SubmissionAttemptSubSchema], default: [] },
   },
   { _id: false },
 );

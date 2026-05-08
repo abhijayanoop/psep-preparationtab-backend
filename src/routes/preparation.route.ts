@@ -2,7 +2,10 @@
 import { Router } from "express";
 import PreparationController from "@controllers/preparation.controller";
 import { Routes } from "@interfaces/routes.interface";
-import { geminiRateLimiter } from "@middlewares/rate-limit.middleware";
+import {
+  geminiRateLimiter,
+  submissionRateLimiter,
+} from "@middlewares/rate-limit.middleware";
 
 class PreparationRoute implements Routes {
   public path = "/preparation";
@@ -44,6 +47,17 @@ class PreparationRoute implements Routes {
     this.router.patch(
       `${this.path}/:studentId/recommendations/:roleId/milestones/:milestoneNumber/progress`,
       this.preparationController.updateMilestoneProgress,
+    );
+
+    this.router.post(
+      `${this.path}/:studentId/recommendations/:roleId/milestones/:milestoneNumber/submit`,
+      submissionRateLimiter,
+      this.preparationController.submitMilestone,
+    );
+
+    this.router.get(
+      `${this.path}/:studentId/recommendations/:roleId/milestones/:milestoneNumber/submissions`,
+      this.preparationController.getMilestoneHistory,
     );
   }
 }

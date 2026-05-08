@@ -12,3 +12,14 @@ export const geminiRateLimiter = rateLimit({
   legacyHeaders: false,
   skipFailedRequests: false,
 });
+
+export const submissionRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req: Request) => req.params.studentId,
+  message: {
+    message: "Too many submission requests. Please wait before trying again.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
