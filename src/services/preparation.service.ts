@@ -6,7 +6,7 @@ import {
   composeAcademicBackground,
   deriveReadinessLabel,
 } from "@/utils/readinessUtil";
-import GeminiService from "./gemini.service";
+import GeminiService from "./bedrock.service";
 import {
   GeneratedRecommendation,
   MilestoneProgress,

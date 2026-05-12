@@ -21,7 +21,7 @@
     "postinstall": "npx husky install"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@aws-sdk/client-bedrock-runtime": "^3.1045.0",
     "bcrypt": "^5.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",

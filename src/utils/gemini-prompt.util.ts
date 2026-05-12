@@ -48,7 +48,7 @@ Constraints:
   }" student should see realistic matches.
 2. CTC figures in LPA (Lakh Per Annum) reflecting Indian market reality.
 3. Career progression MUST have exactly 4 stages in order: Entry, Mid, Senior, Lead.
-4. Include 3-5 milestones per role. Each milestone gains 15-25% readiness. Total across all milestones should be 60-100%.
+4. Include 3-5 milestones per role. The SUM of all "careerReadinessGain" values for a role MUST equal exactly 75. Per-milestone: min 10, max 30. Valid examples: 4 milestones → [20, 20, 20, 15]; 3 milestones → [25, 25, 25]; 5 milestones → [15, 15, 15, 15, 15].
 5. Each milestone has one capstone project with 3-6 deliverables.
 6. List 3-6 top companies with hiring status. Mix High Hiring + Moderate Hiring.
 7. "whyThisRoleBlurb" MUST reference specific fields from the student's profile
@@ -153,7 +153,7 @@ Array must contain exactly 4 objects matching this structure:
   `.trim();
 };
 
-export const GEMINI_SYSTEM_INSTRUCTION = `
+export const SYSTEM_INSTRUCTION = `
 You are an expert career advisor specializing in the Indian higher education and
 early-career job market. You have deep knowledge of 2025-2026 hiring trends,
 realistic compensation bands in LPA, and the skill gaps between Indian graduates

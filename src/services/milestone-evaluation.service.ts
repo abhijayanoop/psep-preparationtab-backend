@@ -1,7 +1,10 @@
 import { HttpException } from "@exceptions/HttpException";
 import { GeminiException, GeminiErrorCode } from "@exceptions/GeminiException";
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
-import { GEMINI_API_KEY, GEMINI_MODEL } from "@config";
+import {
+  BedrockRuntimeClient,
+  ConverseCommand,
+} from "@aws-sdk/client-bedrock-runtime";
+import { AWS_REGION_HAIKU, BEDROCK_MODEL_HAIKU } from "@config";
 import {
   MilestoneEvaluation,
   MilestoneEvaluationSchema,
@@ -10,7 +13,7 @@ import {
 import recommendationSetModel from "@/models/recommendation-set.model";
 import {
   buildMilestoneEvaluationPrompt,
-  GEMINI_SYSTEM_INSTRUCTION,
+  SYSTEM_INSTRUCTION,
 } from "@utils/gemini-prompt.util";
 import { fetchGitHubRepoContents } from "@utils/github-fetch.util";
 import { logger } from "@utils/logger";
@@ -19,25 +22,17 @@ const ATTEMPTS_PER_DAY = 3;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 class MilestoneEvaluationService {
-  private model: GenerativeModel;
+  private client: BedrockRuntimeClient;
+  private modelId: string;
 
   constructor() {
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
-
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    this.model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL || "gemini-2.0-flash",
-      systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
-      generationConfig: {
-        temperature: 0.2, // low temp for deterministic evaluation
-        topP: 0.9,
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
-      },
+    this.client = new BedrockRuntimeClient({
+      region: AWS_REGION_HAIKU || "us-east-1",
     });
+    this.modelId =
+      BEDROCK_MODEL_HAIKU || "us.anthropic.claude-3-haiku-20240307-v1:0";
   }
 
-  //Main entry point: submit a repo URL for milestone evaluation.
   public async submitForEvaluation(
     studentId: string,
     roleId: string,
@@ -110,7 +105,7 @@ class MilestoneEvaluationService {
       repoContents,
     );
 
-    const evaluation = await this.callGeminiForEvaluation(prompt);
+    const evaluation = await this.callBedrockForEvaluation(prompt);
 
     const attemptNumber = (milestone.submissionAttempts ?? []).length + 1;
     const attempt: SubmissionAttempt = {
@@ -149,7 +144,6 @@ class MilestoneEvaluationService {
     return { attempt, progressUpdated };
   }
 
-  //Returns all submission attempts for a milestone
   public async getSubmissionHistory(
     studentId: string,
     roleId: string,
@@ -174,34 +168,43 @@ class MilestoneEvaluationService {
     return milestone.submissionAttempts ?? [];
   }
 
-  private async callGeminiForEvaluation(
+  private async callBedrockForEvaluation(
     prompt: string,
   ): Promise<MilestoneEvaluation> {
     let rawText: string;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
+      const result = await this.client.send(
+        new ConverseCommand({
+          modelId: this.modelId,
+          messages: [
+            {
+              role: "user",
+              content: [{ text: prompt }],
+            },
+          ],
+          system: [{ text: SYSTEM_INSTRUCTION }],
+          inferenceConfig: {
+            maxTokens: 4096,
+            temperature: 0.2,
+            topP: 0.9,
+          },
+        }),
+      );
 
-      if (response.promptFeedback?.blockReason) {
-        throw new GeminiException(
-          GeminiErrorCode.SAFETY_BLOCK,
-          `Gemini blocked evaluation prompt: ${response.promptFeedback.blockReason}`,
-        );
-      }
+      rawText = result.output?.message?.content?.[0]?.text ?? "";
 
-      rawText = response.text();
       if (!rawText?.trim()) {
         throw new GeminiException(
           GeminiErrorCode.EMPTY_RESPONSE,
-          "Gemini returned empty evaluation",
+          "Bedrock returned empty evaluation",
         );
       }
     } catch (error) {
       if (error instanceof GeminiException) throw error;
       throw new GeminiException(
         GeminiErrorCode.API_CALL_FAILED,
-        `Gemini evaluation API call failed: ${(error as Error).message}`,
+        `Bedrock evaluation API call failed: ${(error as Error).message}`,
         error,
       );
     }
@@ -215,18 +218,33 @@ class MilestoneEvaluationService {
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      throw new GeminiException(
-        GeminiErrorCode.PARSE_FAILURE,
-        "Gemini evaluation returned non-JSON response",
-        { raw: cleaned.slice(0, 300) },
-      );
+      // Try extracting JSON object from text
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        try {
+          parsed = JSON.parse(cleaned.substring(start, end + 1));
+        } catch {
+          throw new GeminiException(
+            GeminiErrorCode.PARSE_FAILURE,
+            "Bedrock evaluation returned non-JSON response",
+            { raw: cleaned.slice(0, 300) },
+          );
+        }
+      } else {
+        throw new GeminiException(
+          GeminiErrorCode.PARSE_FAILURE,
+          "Bedrock evaluation returned non-JSON response",
+          { raw: cleaned.slice(0, 300) },
+        );
+      }
     }
 
     const validated = MilestoneEvaluationSchema.safeParse(parsed);
     if (!validated.success) {
       throw new GeminiException(
         GeminiErrorCode.VALIDATION_FAILURE,
-        "Gemini evaluation response failed schema validation",
+        "Bedrock evaluation response failed schema validation",
         { issues: validated.error.issues },
       );
     }
