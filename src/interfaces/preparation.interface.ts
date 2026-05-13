@@ -1,5 +1,11 @@
 export type ReadinessLabel = "Developing" | "Emerging" | "Ready" | "Advanced";
 
+export interface EnrichedPreparationContext extends StudentPreparationContext {
+  careersOfInterest: string[];
+  proficientSkills: string[];
+  industries: string[];
+}
+
 export interface StudentPreparationContext {
   studentId: string;
   studentName: string;

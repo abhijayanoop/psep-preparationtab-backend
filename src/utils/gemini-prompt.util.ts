@@ -1,9 +1,9 @@
-import { StudentPreparationContext } from "@interfaces/preparation.interface";
+import { EnrichedPreparationContext } from "@interfaces/preparation.interface";
 import type { EvaluationRubric } from "@/schema/preparation.schema";
 import type { GitHubRepoContents } from "./github-fetch.util";
 
 export const buildCareerRecommendationPrompt = (
-  context: StudentPreparationContext,
+  context: EnrichedPreparationContext,
 ): string => {
   return `
 You are generating career recommendations for a student in the Indian higher education market.
@@ -38,6 +38,15 @@ ${
 - Industry: ${context.careerIntent.industry || "Not specified"}
 - Target role: ${context.careerIntent.role || "Not specified"}
 
+## CAREERS OF INTEREST (user-stated)
+${context.careersOfInterest.length > 0 ? context.careersOfInterest.join(", ") : "Not specified"}
+
+## PROFICIENT SKILLS (user-declared strengths)
+${context.proficientSkills.length > 0 ? context.proficientSkills.join(", ") : "Not specified"}
+
+## PREFERRED INDUSTRIES (user-stated)
+${context.industries.length > 0 ? context.industries.join(", ") : "Not specified"}
+
 ## TASK
 
 Recommend EXACTLY 4 career roles suited to this student for the Indian job market (2025-2026).
@@ -52,7 +61,7 @@ Constraints:
 5. Each milestone has one capstone project with 3-6 deliverables.
 6. List 3-6 top companies with hiring status. Mix High Hiring + Moderate Hiring.
 7. "whyThisRoleBlurb" MUST reference specific fields from the student's profile
-   (their course, indices, or acquired skills) — not generic statements.
+   (their course, indices, acquired skills, stated careers of interest, proficient skills, or preferred industries) — not generic statements.
 
 ## OUTPUT FORMAT
 

@@ -8,6 +8,9 @@ export interface IContextSnapshot {
   skillIndex: number;
   acquiredSkills: string[];
   readinessLabel: string;
+  careersOfInterest?: string[];
+  proficientSkills?: string[];
+  industries?: string[];
 }
 
 export interface IRecommendationSet {

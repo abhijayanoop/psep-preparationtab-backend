@@ -83,10 +83,23 @@ class PreparationController {
   ) => {
     try {
       const studentId = req.params.studentId;
-      const set =
-        await this.preparationService.generateInitialRecommendationSet(
-          studentId,
+      const { careersOfInterest, proficientSkills, industries } = req.body;
+
+      if (
+        !Array.isArray(careersOfInterest) || careersOfInterest.length === 0 ||
+        !Array.isArray(proficientSkills) || proficientSkills.length === 0 ||
+        !Array.isArray(industries) || industries.length === 0
+      ) {
+        throw new HttpException(
+          400,
+          "careersOfInterest, proficientSkills, and industries are required non-empty arrays",
         );
+      }
+
+      const set = await this.preparationService.generateInitialRecommendationSet(
+        studentId,
+        { careersOfInterest, proficientSkills, industries },
+      );
 
       res.status(201).json({
         data: set,
@@ -107,8 +120,22 @@ class PreparationController {
   ) => {
     try {
       const studentId = req.params.studentId;
+      const { careersOfInterest, proficientSkills, industries } = req.body;
+
+      if (
+        !Array.isArray(careersOfInterest) || careersOfInterest.length === 0 ||
+        !Array.isArray(proficientSkills) || proficientSkills.length === 0 ||
+        !Array.isArray(industries) || industries.length === 0
+      ) {
+        throw new HttpException(
+          400,
+          "careersOfInterest, proficientSkills, and industries are required non-empty arrays",
+        );
+      }
+
       const set = await this.preparationService.regenerateRecommendationSet(
         studentId,
+        { careersOfInterest, proficientSkills, industries },
       );
 
       res.status(201).json({

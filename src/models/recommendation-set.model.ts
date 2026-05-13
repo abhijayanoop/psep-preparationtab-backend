@@ -159,6 +159,9 @@ const ContextSnapshotSubSchema = new Schema(
     skillIndex: { type: Number, required: true },
     acquiredSkills: { type: [String], required: true },
     readinessLabel: { type: String, required: true },
+    careersOfInterest: { type: [String], default: [] },
+    proficientSkills: { type: [String], default: [] },
+    industries: { type: [String], default: [] },
   },
   { _id: false },
 );

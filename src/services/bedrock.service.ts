@@ -4,7 +4,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 import { AWS_REGION_SONNET, BEDROCK_MODEL_SONNET } from "@config";
 import { GeminiException, GeminiErrorCode } from "@exceptions/GeminiException";
-import { StudentPreparationContext } from "@interfaces/preparation.interface";
+import { EnrichedPreparationContext } from "@interfaces/preparation.interface";
 import {
   buildCareerRecommendationPrompt,
   SYSTEM_INSTRUCTION,
@@ -29,7 +29,7 @@ class GeminiService {
   }
 
   public async generateCareerRecommendations(
-    context: StudentPreparationContext,
+    context: EnrichedPreparationContext,
   ): Promise<GeneratedRecommendation[]> {
     const prompt = buildCareerRecommendationPrompt(context);
     const rawResponse = await this.callBedrockWithRetry(prompt);

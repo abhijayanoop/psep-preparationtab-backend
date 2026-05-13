@@ -1,5 +1,5 @@
 import { HttpException } from "@/exceptions/HttpException";
-import { StudentPreparationContext } from "@/interfaces/preparation.interface";
+import { EnrichedPreparationContext, StudentPreparationContext } from "@/interfaces/preparation.interface";
 import IStudent from "@/interfaces/student.interface";
 import studentModel from "@/models/student.model";
 import {
@@ -112,18 +112,25 @@ class PreparationService {
   }
 
   public async getRecommendationsForStudents(studentId: string): Promise<{
-    context: StudentPreparationContext;
+    context: EnrichedPreparationContext;
     recommendations: GeneratedRecommendation[];
   }> {
     const context = await this.getStudentPreparationContext(studentId);
+    const enrichedContext: EnrichedPreparationContext = {
+      ...context,
+      careersOfInterest: [],
+      proficientSkills: [],
+      industries: [],
+    };
     const recommendations =
-      await this.geminiService.generateCareerRecommendations(context);
+      await this.geminiService.generateCareerRecommendations(enrichedContext);
 
-    return { context, recommendations };
+    return { context: enrichedContext, recommendations };
   }
 
   public async generateInitialRecommendationSet(
     studentId: string,
+    userInput: { careersOfInterest: string[]; proficientSkills: string[]; industries: string[] },
   ): Promise<IRecommendationSet> {
     const existing = await recommendationSetModel.findOne({
       studentId,
@@ -137,11 +144,12 @@ class PreparationService {
       );
     }
 
-    return this.buildAndPersistRecommendationSet(studentId, 1);
+    return this.buildAndPersistRecommendationSet(studentId, 1, userInput);
   }
 
   public async regenerateRecommendationSet(
     studentId: string,
+    userInput: { careersOfInterest: string[]; proficientSkills: string[]; industries: string[] },
   ): Promise<IRecommendationSet> {
     const existing = await recommendationSetModel.findOne({
       studentId: studentId,
@@ -163,6 +171,7 @@ class PreparationService {
     const newSet = await this.buildAndPersistRecommendationSet(
       studentId,
       nextVersion,
+      userInput,
     );
 
     return newSet;
@@ -252,10 +261,17 @@ class PreparationService {
   private async buildAndPersistRecommendationSet(
     studentId: string,
     generationVersion: number,
+    userInput: { careersOfInterest: string[]; proficientSkills: string[]; industries: string[] },
   ): Promise<IRecommendationSet> {
     const context = await this.getStudentPreparationContext(studentId);
+    const enrichedContext: EnrichedPreparationContext = {
+      ...context,
+      careersOfInterest: userInput.careersOfInterest,
+      proficientSkills: userInput.proficientSkills,
+      industries: userInput.industries,
+    };
     const generated = await this.geminiService.generateCareerRecommendations(
-      context,
+      enrichedContext,
     );
     const persisted = injectRoleIds(generated);
 
@@ -280,9 +296,12 @@ class PreparationService {
       skillIndex: context.skillIndex,
       acquiredSkills: context.acquiredSkills,
       readinessLabel: context.readinessLabel,
+      careersOfInterest: userInput.careersOfInterest,
+      proficientSkills: userInput.proficientSkills,
+      industries: userInput.industries,
     };
 
-    const contextHash = hashPreparationContext(context);
+    const contextHash = hashPreparationContext(enrichedContext);
 
     const created = await recommendationSetModel.create({
       studentId,
